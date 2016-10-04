@@ -1,7 +1,7 @@
 defmodule Meansweepx.FieldParams do
   use Meansweepx.Web, :model
 
-  schema "fields" do
+  schema "field_params" do
     field :width, :integer
     field :height, :integer
     field :chance, :integer

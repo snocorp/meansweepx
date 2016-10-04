@@ -9,6 +9,7 @@ defmodule Meansweepx.FieldController do
 
   alias Meansweepx.Field
   alias Meansweepx.FieldParams
+  alias Meansweepx.FlagParams
 
   def create(conn, params) do
     cs = FieldParams.changeset(%FieldParams{}, params)
@@ -52,6 +53,81 @@ defmodule Meansweepx.FieldController do
     render(conn, "show.json", field: field)
   end
 
+  def flag(conn, params) do
+    cs = FlagParams.changeset(%FlagParams{}, params)
+    case cs do
+      %{:params => %{"field_id" => field_id, "x" => x, "y" => y}, :valid? => true} ->
+        {x, _} = Integer.parse(x)
+        {y, _} = Integer.parse(y)
+
+        field = Repo.get!(Field, field_id)
+        errors = validate_coordinate(%{}, x, 0, field.width, "x")
+        errors = validate_coordinate(errors, y, 0, field.height, "y")
+
+        cond do
+          map_size(errors) > 0 ->
+            conn
+            |> put_status(:bad_request)
+            |> render(Meansweepx.ErrorView, "400.json", errors: errors)
+          !field.active ->
+            conn
+            |> put_status(:bad_request)
+            |> render(Meansweepx.ErrorView, "400.json", errors: %{field: ["is inactive"]})
+          true ->
+            {_, grid} = Map.get_and_update(field.grid, "#{x},#{y}", fn(current_value) ->
+              {
+                current_value,
+                %{
+                  "value" => current_value["value"],
+                  "flagged" => !current_value["flagged"],
+                  "swept" => current_value["swept"]
+                }
+              }
+            end)
+            changeset = Field.changeset(field, %{grid: grid})
+            case Repo.update(changeset) do
+              {:ok, field} ->
+                conn
+                |> render("show.json", field: field)
+              {:error, changeset} ->
+                Logger.debug(inspect(grid))
+                Logger.debug(inspect(changeset))
+
+                conn
+                |> put_status(:bad_request)
+                |> render(Meansweepx.ChangesetView, "error.json", changeset: changeset)
+            end
+        end
+      _ ->
+        conn
+        |> put_status(:bad_request)
+        |> render(Meansweepx.ChangesetView, "error.json", changeset: cs)
+    end
+  end
+
+  def sweep(conn, %{"field_id" => field_id, "x" => x, "y" => y}) do
+    field = Repo.get!(Field, field_id)
+    render(conn, "show.json", field: field)
+  end
+
+  defp validate_coordinate(errors, c, min, max, name) do
+    if c < min or c >= max do
+      {_, errors} = Map.get_and_update(errors, name, fn(current_value) ->
+        {
+          current_value,
+          if is_nil(current_value) do
+            ["is invalid"]
+          else
+            current_value ++ ["is invalid"]
+          end
+        }
+      end)
+      errors
+    else
+      errors
+    end
+  end
+
   defp build_grid(height, width, chance) do
     range_x = 0..(width-1)
     range_y = 0..(height-1)
@@ -60,21 +136,20 @@ defmodule Meansweepx.FieldController do
     Enum.reduce(range_y, %{}, fn(y, acc_y) ->
       # loop from left (0) to right (width-1)
       Enum.reduce(range_x, acc_y, fn(x, acc_x) ->
+        # build the key
+        key = "#{x},#{y}"
+
         # if {x,y} is a bomb
         if :rand.uniform(100) <= chance do
-          # build the key
-          key = Integer.to_string(x) <> "," <> Integer.to_string(y)
-
           # get the list of valid neighbours
           n = neighbours(x, y, height, width)
 
           acc = update_neighbours(n, acc_x)
 
           # set the value to be a bomb
-          Map.put(acc, key, -1)
+          Map.put(acc, key, %{value: -1, flagged: false, swept: false})
         else
-          # no changes required
-          acc_x
+          Map.put(acc_x, key, %{value: 0, flagged: false, swept: false})
         end
       end)
     end)
