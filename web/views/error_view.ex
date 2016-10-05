@@ -3,12 +3,16 @@ defmodule Meansweepx.ErrorView do
 
   require Logger
 
-  def render("400.json", %{:errors => errors}) do
+  def render("400.json", %{errors: errors}) do
     %{errors: errors}
   end
 
   def render("404.html", _assigns) do
     "Page not found"
+  end
+
+  def render("404.json", %{errors: errors}) do
+    %{errors: errors}
   end
 
   def render("500.html", _assigns) do

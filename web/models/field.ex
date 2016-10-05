@@ -9,6 +9,7 @@ defmodule Meansweepx.Field do
     field :count, :integer
     field :active, :boolean, default: false
     field :grid, :map
+    field :result, :integer, default: 0
 
     timestamps()
   end
@@ -18,9 +19,10 @@ defmodule Meansweepx.Field do
   """
   def changeset(struct, params \\ %{}) do
     struct
-    |> cast(params, [:width, :height, :count, :active, :grid])
+    |> cast(params, [:width, :height, :count, :active, :grid, :result])
     |> validate_required([:width, :height, :count, :active, :grid])
     |> validate_number(:height, greater_than: 0, less_than_or_equal_to: 100)
     |> validate_number(:width, greater_than: 0, less_than_or_equal_to: 100)
+    |> validate_inclusion(:result, 0..2)
   end
 end

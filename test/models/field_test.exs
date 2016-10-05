@@ -3,7 +3,7 @@ defmodule Meansweepx.FieldTest do
 
   alias Meansweepx.Field
 
-  @valid_attrs %{active: true, count: 42, height: 42, width: 42, grid: %{}}
+  @valid_attrs %{active: true, count: 42, height: 42, width: 42, grid: %{}, result: 0}
   @invalid_attrs %{}
 
   test "changeset with valid attributes" do
@@ -34,5 +34,10 @@ defmodule Meansweepx.FieldTest do
   test "width must be less than or equal to 100" do
     attrs = %{@valid_attrs | width: 101}
     assert {:width, "must be less than or equal to 100"} in errors_on(%Field{}, attrs)
+  end
+
+  test "result must be between 0 and 2" do
+    attrs = %{@valid_attrs | result: -1}
+    refute {:result, "must be greater than 0"} in errors_on(%Field{}, attrs)
   end
 end

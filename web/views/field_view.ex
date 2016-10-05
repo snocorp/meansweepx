@@ -6,11 +6,14 @@ defmodule Meansweepx.FieldView do
   end
 
   def render("field.json", %{field: field}) do
-    %{id: field.id,
+    %{
+      id: field.id,
       width: field.width,
       height: field.height,
       count: field.count,
       active: field.active,
-      grid: field.grid}
+      grid: field.grid,
+      result: field.result
+    }
   end
 end

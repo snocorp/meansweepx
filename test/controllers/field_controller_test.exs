@@ -19,13 +19,18 @@ defmodule Meansweepx.FieldControllerTest do
       "height" => field.height,
       "count" => field.count,
       "active" => field.active,
-      "grid" => field.grid}
+      "grid" => field.grid,
+      "result" => 0}
   end
 
   test "renders page not found when id is nonexistent", %{conn: conn} do
-    assert_error_sent 404, fn ->
-      get conn, field_path(conn, :show, Ecto.UUID.generate())
-    end
+    response = conn
+      |> get(field_path(conn, :show, Ecto.UUID.generate()))
+      |> json_response(404)
+
+    expected = %{"errors" => %{"field" => ["not found"]}}
+
+    assert response == expected
   end
 
   test "creates and renders resource when data is valid", %{conn: conn} do
@@ -37,6 +42,149 @@ defmodule Meansweepx.FieldControllerTest do
   test "does not create resource and renders errors when data is invalid", %{conn: conn} do
     conn = post conn, field_path(conn, :create), @invalid_attrs
     assert json_response(conn, 422)["errors"] != %{}
+  end
+
+  test "does not flag chosen grid and renders errors when data is invalid", %{conn: conn} do
+    field = Repo.insert! %Field{}
+    conn = get conn, field_path(conn, :flag, field, "a", "b")
+    assert json_response(conn, 400)["errors"] != %{}
+  end
+
+  test "does not flag chosen grid and renders errors when coords are invalid", %{conn: conn} do
+    field = Repo.insert! %Field{height: 2, width: 2}
+    conn = get conn, field_path(conn, :flag, field, 2, 2)
+    assert json_response(conn, 400)["errors"] != %{}
+  end
+
+  test "does not flag chosen grid and renders errors when field is inactive", %{conn: conn} do
+    field = Repo.insert! %Field{active: false}
+    conn = get conn, field_path(conn, :flag, field, 0, 0)
+    assert json_response(conn, 400)["errors"] != %{}
+  end
+
+  test "does not flag chosen grid and renders errors when field is not found", %{conn: conn} do
+    conn = get conn, field_path(conn, :flag, Ecto.UUID.generate(), 0, 0)
+    assert json_response(conn, 404)["errors"] != %{}
+  end
+
+  test "flags chosen grid and renders field", %{conn: conn} do
+    field = Repo.insert! %Field{
+      height: 2,
+      width: 2,
+      count: 0,
+      grid: %{
+        "0,0" => %{"value" => 0, "flagged" => false, "swept" => false},
+        "0,1" => %{"value" => 0, "flagged" => false, "swept" => false},
+        "1,0" => %{"value" => 0, "flagged" => false, "swept" => false},
+        "1,1" => %{"value" => 0, "flagged" => false, "swept" => false},
+      },
+      active: true}
+    conn = get conn, field_path(conn, :flag, field, 1, 0)
+    field_response = json_response(conn, 200)["data"]
+    assert field_response != %{}
+    assert field_response["grid"]["1,0"]["value"] == 0
+    assert field_response["grid"]["1,0"]["flagged"] == true
+    assert field_response["grid"]["1,0"]["swept"] == false
+  end
+
+  test "does not sweep chosen grid and renders errors when data is invalid", %{conn: conn} do
+    field = Repo.insert! %Field{}
+    conn = get conn, field_path(conn, :sweep, field, "a", "b")
+    assert json_response(conn, 400)["errors"] != %{}
+  end
+
+  test "does not sweep chosen grid and renders errors when coords are invalid", %{conn: conn} do
+    field = Repo.insert! %Field{height: 2, width: 2}
+    conn = get conn, field_path(conn, :sweep, field, 2, 2)
+    assert json_response(conn, 400)["errors"] != %{}
+  end
+
+  test "does not sweep chosen grid and renders errors when field is inactive", %{conn: conn} do
+    field = Repo.insert! %Field{active: false}
+    conn = get conn, field_path(conn, :sweep, field, 0, 0)
+    assert json_response(conn, 400)["errors"] != %{}
+  end
+
+  test "does not sweep chosen grid and renders errors when field is not found", %{conn: conn} do
+    conn = get conn, field_path(conn, :sweep, Ecto.UUID.generate(), 0, 0)
+    assert json_response(conn, 404)["errors"] != %{}
+  end
+
+  test "sweeps chosen grid and neighbours and renders field with no bombs", %{conn: conn} do
+    field = Repo.insert! %Field{
+      height: 2,
+      width: 2,
+      count: 0,
+      grid: %{
+        "0,0" => %{"value" => 0, "flagged" => false, "swept" => false},
+        "0,1" => %{"value" => 0, "flagged" => false, "swept" => false},
+        "1,0" => %{"value" => 0, "flagged" => false, "swept" => false},
+        "1,1" => %{"value" => 0, "flagged" => false, "swept" => false},
+      },
+      active: true}
+    conn = get conn, field_path(conn, :sweep, field, 1, 0)
+    field_response = json_response(conn, 200)["data"]
+    assert field_response != %{}
+
+    # all grids should be swept since there are no bombs
+    Enum.each(field_response["grid"], fn({_, v}) ->
+      assert is_number(v["value"])
+      assert v["flagged"] == false
+      assert v["swept"] == true
+    end)
+  end
+
+  test "sweeps chosen grid and neighbours and renders field with one bomb", %{conn: conn} do
+    field = Repo.insert! %Field{
+      height: 2,
+      width: 2,
+      count: 1,
+      grid: %{
+        "0,0" => %{"value" => -1, "flagged" => false, "swept" => false},
+        "0,1" => %{"value" => 1, "flagged" => false, "swept" => false},
+        "1,0" => %{"value" => 1, "flagged" => false, "swept" => false},
+        "1,1" => %{"value" => 1, "flagged" => false, "swept" => false},
+      },
+      active: true}
+    conn = get conn, field_path(conn, :sweep, field, 1, 0)
+    field_response = json_response(conn, 200)["data"]
+    assert field_response != %{}
+
+    # only chosen grid should be swept
+    Enum.each(field_response["grid"], fn({k, v}) ->
+      assert is_number(v["value"])
+      assert v["flagged"] == false
+      assert v["swept"] == (k == "1,0")
+    end)
+  end
+
+  test "sweeps chosen grid and neighbours and renders 3x3 field with one bomb", %{conn: conn} do
+    field = Repo.insert! %Field{
+      height: 3,
+      width: 3,
+      count: 1,
+      grid: %{
+        "0,0" => %{"value" => -1, "flagged" => false, "swept" => false},
+        "0,1" => %{"value" => 1, "flagged" => false, "swept" => false},
+        "0,2" => %{"value" => 0, "flagged" => false, "swept" => false},
+        "1,0" => %{"value" => 1, "flagged" => false, "swept" => false},
+        "1,1" => %{"value" => 1, "flagged" => false, "swept" => false},
+        "1,2" => %{"value" => 0, "flagged" => false, "swept" => false},
+        "2,0" => %{"value" => 0, "flagged" => false, "swept" => false},
+        "2,1" => %{"value" => 0, "flagged" => false, "swept" => false},
+        "2,2" => %{"value" => 0, "flagged" => false, "swept" => false},
+      },
+      active: true}
+    conn = get conn, field_path(conn, :sweep, field, 2, 0)
+    field_response = json_response(conn, 200)["data"]
+    assert field_response != %{}
+
+    # only chosen grid should be swept
+    Enum.each(field_response["grid"], fn({_, v}) ->
+      assert is_number(v["value"])
+      assert v["flagged"] == false
+      assert v["swept"] == (v["value"] != -1)
+    end)
   end
 
   # test "updates and renders chosen resource when data is valid", %{conn: conn} do
