@@ -42,7 +42,11 @@ exports.config = {
     // Dependencies and current project directories to watch
     watched: [
       "web/static",
-      "test/static"
+      "test/static",
+      "web/elm/MeanSweep.elm",
+      "web/elm/Header.elm",
+      "web/elm/Grid.elm",
+      "web/elm/Models.elm"
     ],
 
     // Where to compile files to
@@ -51,6 +55,12 @@ exports.config = {
 
   // Configure your plugins
   plugins: {
+    elmBrunch: {
+      elmFolder: "web/elm",
+      mainModules: ["MeanSweep.elm"],
+      outputFolder: "../static/vendor",
+      executablePath: "../../node_modules/elm/binwrappers"
+    },
     babel: {
       // Do not use ES6 compiler in vendor code
       ignore: [/web\/static\/vendor/]
