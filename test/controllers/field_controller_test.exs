@@ -1,10 +1,11 @@
 defmodule Meansweepx.FieldControllerTest do
   require Ecto
+  require Logger
 
   use Meansweepx.ConnCase
 
   alias Meansweepx.Field
-  @valid_attrs %{chance: 42, height: 42, width: 42}
+  @valid_attrs %{chance: 42, height: 42, width: 42, grid: %{"0,0" => %{"value" => 0, "flagged" => false, "swept" => false}}}
   @invalid_attrs %{chance: 50, height: 0, width: 0}
 
   setup %{conn: conn} do
@@ -12,14 +13,18 @@ defmodule Meansweepx.FieldControllerTest do
   end
 
   test "shows chosen resource", %{conn: conn} do
-    field = Repo.insert! %Field{}
+    field = Repo.insert! %Field{
+      height: 1,
+      width: 1,
+      grid: %{"0,0" => %{"value" => 0, "flagged" => false, "swept" => false}}
+    }
     conn = get conn, field_path(conn, :show, field)
     assert json_response(conn, 200)["data"] == %{"id" => field.id,
       "width" => field.width,
       "height" => field.height,
       "count" => field.count,
       "active" => field.active,
-      "grid" => field.grid,
+      "grid" => [Enum.map(Map.values(field.grid), fn(v) -> Map.put(v, "value", -2) end)],
       "result" => 0}
   end
 
@@ -82,9 +87,11 @@ defmodule Meansweepx.FieldControllerTest do
     conn = get conn, field_path(conn, :flag, field, 1, 0)
     field_response = json_response(conn, 200)["data"]
     assert field_response != %{}
-    assert field_response["grid"]["1,0"]["value"] == 0
-    assert field_response["grid"]["1,0"]["flagged"] == true
-    assert field_response["grid"]["1,0"]["swept"] == false
+    gridRow0 = Enum.at(field_response["grid"], 0)
+    grid10 = Enum.at(gridRow0, 1)
+    assert grid10["value"] == -2  # unknown
+    assert grid10["flagged"] == true
+    assert grid10["swept"] == false
   end
 
   test "does not sweep chosen grid and renders errors when data is invalid", %{conn: conn} do
@@ -127,7 +134,7 @@ defmodule Meansweepx.FieldControllerTest do
     assert field_response != %{}
 
     # all grids should be swept since there are no bombs
-    Enum.each(field_response["grid"], fn({_, v}) ->
+    Enum.each(List.flatten(field_response["grid"]), fn(v) ->
       assert is_number(v["value"])
       assert v["flagged"] == false
       assert v["swept"] == true
@@ -151,10 +158,14 @@ defmodule Meansweepx.FieldControllerTest do
     assert field_response != %{}
 
     # only chosen grid should be swept
-    Enum.each(field_response["grid"], fn({k, v}) ->
-      assert is_number(v["value"])
-      assert v["flagged"] == false
-      assert v["swept"] == (k == "1,0")
+    Enum.each([0,1], fn(y) ->
+      row = Enum.at(field_response["grid"], y)
+      Enum.each([0,1], fn(x) ->
+        v = Enum.at(row, x)
+        assert is_number(v["value"])
+        assert v["flagged"] == false
+        assert v["swept"] == (x == 1 && y == 0)
+      end)
     end)
   end
 
@@ -180,10 +191,14 @@ defmodule Meansweepx.FieldControllerTest do
     assert field_response != %{}
 
     # only chosen grid should be swept
-    Enum.each(field_response["grid"], fn({_, v}) ->
-      assert is_number(v["value"])
-      assert v["flagged"] == false
-      assert v["swept"] == (v["value"] != -1)
+    Enum.each([0,1], fn(y) ->
+      row = Enum.at(field_response["grid"], y)
+      Enum.each([0,1], fn(x) ->
+        v = Enum.at(row, x)
+        assert is_number(v["value"])
+        assert v["flagged"] == false
+        assert v["swept"] == (x != 0 || y != 0)
+      end)
     end)
   end
 

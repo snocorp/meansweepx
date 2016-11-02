@@ -253,7 +253,6 @@ defmodule Meansweepx.FieldController do
   end
 
   defp update_neighbours(n, acc) do
-    Logger.warn("update_neighbours")
     # loop through the neighbours
     Enum.reduce(n, acc, fn(z, acc_z) ->
       key = "#{elem(z, 0)},#{elem(z, 1)}"
