@@ -45,7 +45,9 @@ exports.config = {
       "test/static",
       "web/elm/MeanSweep.elm",
       "web/elm/Header.elm",
+      "web/elm/Content.elm",
       "web/elm/Grid.elm",
+      "web/elm/Modal.elm",
       "web/elm/Models.elm"
     ],
 
