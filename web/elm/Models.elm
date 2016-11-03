@@ -5,7 +5,9 @@ import HttpBuilder as Http
 type Msg =
   NewGame GameSpec Bool | NewGameSucceed (Http.Response Field) | NewGameFail (Http.Error Errors) | NewGameCancel |
   LoadGame String Bool | LoadGameSucceed (Http.Response Field) | LoadGameFail (Http.Error String) |
-  Flag | Sweep |
+  ActivateBlock Int Int |
+  Flag String Int Int | FlagFail (Http.Error Errors) | FlagSucceed (Http.Response Field) |
+  Sweep |
   NavigateToIndex | NavigateToGame String |
   ChangeCustomHeight String | ChangeCustomWidth String | ChangeCustomChance String
 
@@ -37,7 +39,8 @@ type alias Field = {
   height : Int,
   count : Int,
   result : GameResult,
-  grid : Grid
+  grid : Grid,
+  activeBlock : Maybe (Int, Int)
   }
 
 type Route = Index | Game String

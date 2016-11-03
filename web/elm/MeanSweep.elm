@@ -1,5 +1,6 @@
 module MeanSweep exposing (..)
 
+import Decoders
 import Models exposing (..)
 import Header
 import Content
@@ -8,8 +9,6 @@ import Modal
 import Html exposing (Html, a, button, div, form, h1, h4, input, label, li, nav, p, span, text, ul)
 import Html.Attributes exposing (class, classList, for, href, id, max, min, type', value)
 import HttpBuilder as Http exposing (jsonReader, send, stringReader, withHeader, withJsonBody, withTimeout)
-import Json.Decode as JSD
-import Json.Decode.Pipeline exposing (decode, required, requiredAt, optional, optionalAt, hardcoded)
 import Json.Encode as JSE
 import Navigation
 import String
@@ -127,7 +126,6 @@ update msg model =
               widthError = Nothing,
               chanceError = Nothing
               }
-
       in
         ({model | error = error}, Cmd.none)
 
@@ -166,8 +164,65 @@ update msg model =
       in
         ({model | error = {error | errorMsg = Just message}}, Cmd.none)
 
-    Flag ->
-      (model, Cmd.none)
+    ActivateBlock x y ->
+      case model.field of
+        Just field ->
+          ({model | field = Just {field | activeBlock = Just (Debug.log "x,y" (x, y))}}, Cmd.none)
+        Nothing ->
+          (model, Cmd.none)
+
+    Flag gameId x y ->
+      let
+        newModel =
+          case model.field of
+            Just field ->
+              {model | field = Just {field | activeBlock = Nothing}}
+            Nothing ->
+              model
+      in
+        (newModel, flag gameId x y)
+
+    FlagSucceed response ->
+      let
+        updatedField = response.data
+      in
+        ({model | field = Just updatedField}, Cmd.none)
+
+    FlagFail err ->
+      let
+        modelError = model.error
+        message = case err of
+          Http.Timeout ->
+            "It took too long to flag the area. Please try again."
+          Http.NetworkError ->
+            "There was a problem trying to flag the area. Please try again."
+          Http.UnexpectedPayload details ->
+            details
+          Http.BadResponse response ->
+            case response.status of
+              400 ->
+                "There was a problem trying to flag the area."
+              404 ->
+                "The game you tried to flag was not found."
+              _ ->
+                response.statusText
+        error = case err of
+          Http.BadResponse response ->
+            {modelError |
+              errorMsg = Just message --,
+              -- heightError = List.head response.data.height,
+              -- widthError = List.head response.data.width,
+              -- chanceError = List.head response.data.chance
+              }
+          _ ->
+            {modelError |
+              errorMsg = Just message --,
+              -- heightError = Nothing,
+              -- widthError = Nothing,
+              -- chanceError = Nothing
+              }
+      in
+        ({model | error = error}, Cmd.none)
 
     Sweep ->
       (model, Cmd.none)
@@ -250,43 +305,6 @@ urlUpdate result model =
         ({model | error = {modelError | errorMsg = Just err}}, Cmd.none)
 
 
-resultDecoder : JSD.Decoder GameResult
-resultDecoder =
-  let
-    decodeToType int =
-      case int of
-        0 -> Result.Ok Undecided
-        1 -> Result.Ok Win
-        2 -> Result.Ok Loss
-        _ -> Result.Err ("Not valid pattern for decoder to GameResult. Pattern: " ++ (toString int))
-  in
-    JSD.customDecoder JSD.int decodeToType
-
-gridBlockDecoder : JSD.Decoder GridBlock
-gridBlockDecoder =
-  decode GridBlock
-    |> required "value" JSD.int
-    |> required "flagged" JSD.bool
-    |> required "swept" JSD.bool
-
-
-fieldDecoder : JSD.Decoder Field
-fieldDecoder =
-  decode Field
-    |> requiredAt ["data", "id"]     JSD.string
-    |> requiredAt ["data", "height"] JSD.int
-    |> requiredAt ["data", "width"]  JSD.int
-    |> requiredAt ["data", "count"]  JSD.int
-    |> requiredAt ["data", "result"] resultDecoder
-    |> requiredAt ["data", "grid"]   (JSD.list (JSD.list gridBlockDecoder))
-
-errorsDecoder : JSD.Decoder Errors
-errorsDecoder =
-  decode Errors
-    |> optionalAt ["errors", "height"] (JSD.list JSD.string) []
-    |> optionalAt ["errors", "width"] (JSD.list JSD.string) []
-    |> optionalAt ["errors", "chance"] (JSD.list JSD.string) []
-
 newGame : GameSpec -> Cmd Msg
 newGame gameSpec =
   let
@@ -301,7 +319,7 @@ newGame gameSpec =
         |> withJsonBody params
         |> withHeader "Content-Type" "application/json"
         |> withTimeout (1 * Time.second)
-        |> send (jsonReader fieldDecoder) (jsonReader errorsDecoder)
+        |> send (jsonReader Decoders.fieldDecoder) (jsonReader Decoders.errorsDecoder)
       )
 
 loadGame : String -> Cmd Msg
@@ -310,8 +328,19 @@ loadGame gameId =
     Http.get ("/api/fields/" ++ gameId)
       |> withHeader "Content-Type" "application/json"
       |> withTimeout (1 * Time.second)
-      |> send (jsonReader fieldDecoder) stringReader
+      |> send (jsonReader Decoders.fieldDecoder) stringReader
     )
+
+flag : String -> Int -> Int -> Cmd Msg
+flag gameId x y =
+  let
+    url = String.join "/" ["/api/fields/flag", gameId, toString x, toString y]
+  in
+    Task.perform FlagFail FlagSucceed (
+      Http.post url
+        |> withTimeout (1 * Time.second)
+        |> send (jsonReader Decoders.fieldDecoder) (jsonReader Decoders.errorsDecoder)
+      )
 
 -- SUBSCRIPTIONS
 
@@ -325,9 +354,12 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-  div [class "modal-open"] [
-    Header.header model,
-    Content.content model,
-    Modal.confirmModal model,
-    Modal.backdrop model
-    ]
+  let
+    showModal = model.newGameSpec /= Nothing
+  in
+    div [classList [("modal-open", showModal)]] [
+      Header.header model,
+      Content.content model,
+      Modal.confirmModal model,
+      Modal.backdrop model
+      ]

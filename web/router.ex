@@ -24,7 +24,7 @@ defmodule Meansweepx.Router do
     pipe_through :api
 
     resources "/fields", FieldController, only: [:show, :create]
-    get "/fields/flag/:field_id/:x/:y", FieldController, :flag
-    get "/fields/sweep/:field_id/:x/:y", FieldController, :sweep
+    post "/fields/flag/:field_id/:x/:y", FieldController, :flag
+    post "/fields/sweep/:field_id/:x/:y", FieldController, :sweep
   end
 end

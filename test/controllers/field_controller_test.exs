@@ -51,24 +51,24 @@ defmodule Meansweepx.FieldControllerTest do
 
   test "does not flag chosen grid and renders errors when data is invalid", %{conn: conn} do
     field = Repo.insert! %Field{}
-    conn = get conn, field_path(conn, :flag, field, "a", "b")
+    conn = post conn, field_path(conn, :flag, field, "a", "b")
     assert json_response(conn, 400)["errors"] != %{}
   end
 
   test "does not flag chosen grid and renders errors when coords are invalid", %{conn: conn} do
     field = Repo.insert! %Field{height: 2, width: 2}
-    conn = get conn, field_path(conn, :flag, field, 2, 2)
+    conn = post conn, field_path(conn, :flag, field, 2, 2)
     assert json_response(conn, 400)["errors"] != %{}
   end
 
   test "does not flag chosen grid and renders errors when field is inactive", %{conn: conn} do
     field = Repo.insert! %Field{active: false}
-    conn = get conn, field_path(conn, :flag, field, 0, 0)
+    conn = post conn, field_path(conn, :flag, field, 0, 0)
     assert json_response(conn, 400)["errors"] != %{}
   end
 
   test "does not flag chosen grid and renders errors when field is not found", %{conn: conn} do
-    conn = get conn, field_path(conn, :flag, Ecto.UUID.generate(), 0, 0)
+    conn = post conn, field_path(conn, :flag, Ecto.UUID.generate(), 0, 0)
     assert json_response(conn, 404)["errors"] != %{}
   end
 
@@ -84,7 +84,7 @@ defmodule Meansweepx.FieldControllerTest do
         "1,1" => %{"value" => 0, "flagged" => false, "swept" => false},
       },
       active: true}
-    conn = get conn, field_path(conn, :flag, field, 1, 0)
+    conn = post conn, field_path(conn, :flag, field, 1, 0)
     field_response = json_response(conn, 200)["data"]
     assert field_response != %{}
     gridRow0 = Enum.at(field_response["grid"], 0)
@@ -96,24 +96,24 @@ defmodule Meansweepx.FieldControllerTest do
 
   test "does not sweep chosen grid and renders errors when data is invalid", %{conn: conn} do
     field = Repo.insert! %Field{}
-    conn = get conn, field_path(conn, :sweep, field, "a", "b")
+    conn = post conn, field_path(conn, :sweep, field, "a", "b")
     assert json_response(conn, 400)["errors"] != %{}
   end
 
   test "does not sweep chosen grid and renders errors when coords are invalid", %{conn: conn} do
     field = Repo.insert! %Field{height: 2, width: 2}
-    conn = get conn, field_path(conn, :sweep, field, 2, 2)
+    conn = post conn, field_path(conn, :sweep, field, 2, 2)
     assert json_response(conn, 400)["errors"] != %{}
   end
 
   test "does not sweep chosen grid and renders errors when field is inactive", %{conn: conn} do
     field = Repo.insert! %Field{active: false}
-    conn = get conn, field_path(conn, :sweep, field, 0, 0)
+    conn = post conn, field_path(conn, :sweep, field, 0, 0)
     assert json_response(conn, 400)["errors"] != %{}
   end
 
   test "does not sweep chosen grid and renders errors when field is not found", %{conn: conn} do
-    conn = get conn, field_path(conn, :sweep, Ecto.UUID.generate(), 0, 0)
+    conn = post conn, field_path(conn, :sweep, Ecto.UUID.generate(), 0, 0)
     assert json_response(conn, 404)["errors"] != %{}
   end
 
@@ -129,7 +129,7 @@ defmodule Meansweepx.FieldControllerTest do
         "1,1" => %{"value" => 0, "flagged" => false, "swept" => false},
       },
       active: true}
-    conn = get conn, field_path(conn, :sweep, field, 1, 0)
+    conn = post conn, field_path(conn, :sweep, field, 1, 0)
     field_response = json_response(conn, 200)["data"]
     assert field_response != %{}
 
@@ -153,7 +153,7 @@ defmodule Meansweepx.FieldControllerTest do
         "1,1" => %{"value" => 1, "flagged" => false, "swept" => false},
       },
       active: true}
-    conn = get conn, field_path(conn, :sweep, field, 1, 0)
+    conn = post conn, field_path(conn, :sweep, field, 1, 0)
     field_response = json_response(conn, 200)["data"]
     assert field_response != %{}
 
@@ -186,7 +186,7 @@ defmodule Meansweepx.FieldControllerTest do
         "2,2" => %{"value" => 0, "flagged" => false, "swept" => false},
       },
       active: true}
-    conn = get conn, field_path(conn, :sweep, field, 2, 0)
+    conn = post conn, field_path(conn, :sweep, field, 2, 0)
     field_response = json_response(conn, 200)["data"]
     assert field_response != %{}
 

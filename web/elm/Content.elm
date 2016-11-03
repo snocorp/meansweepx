@@ -1,14 +1,11 @@
 module Content exposing (content)
 
 import Models exposing (..)
-import Grid exposing (gridRows)
+import Grid exposing (gridSvg)
 
 import Html exposing (Html, a, button, div, form, h1, h4, input, label, li, nav, p, span, text, ul)
 import Html.Attributes exposing (class, classList, for, href, id, max, min, type', value)
 import Html.Events exposing (onClick, onInput)
-import String exposing (join)
-import Svg exposing (svg)
-import Svg.Attributes exposing (viewBox, width)
 
 content : Model -> Html Msg
 content model =
@@ -50,13 +47,8 @@ content model =
             div [] [text "TODO: No game"]
 
           Just field ->
-            svg [ viewBox (gridViewBox field.width field.height), width "100%" ]
-              (gridRows field.grid)
+            Grid.gridSvg field
         ]
-
-gridViewBox : Int -> Int -> String
-gridViewBox h w =
-  String.join " " (List.map toString [0, 0, w * 100, h * 100])
 
 minefieldCard : Int -> Int -> Int -> Html Msg
 minefieldCard h w c =
