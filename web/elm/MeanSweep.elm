@@ -206,23 +206,8 @@ update msg model =
                 "The game you tried to flag was not found."
               _ ->
                 response.statusText
-        error = case err of
-          Http.BadResponse response ->
-            {modelError |
-              errorMsg = Just message --,
-              -- heightError = List.head response.data.height,
-              -- widthError = List.head response.data.width,
-              -- chanceError = List.head response.data.chance
-              }
-          _ ->
-            {modelError |
-              errorMsg = Just message --,
-              -- heightError = Nothing,
-              -- widthError = Nothing,
-              -- chanceError = Nothing
-              }
       in
-        ({model | error = error}, Cmd.none)
+        ({model | error = {modelError | errorMsg = Just message}}, Cmd.none)
 
     Sweep ->
       (model, Cmd.none)
@@ -274,6 +259,11 @@ update msg model =
           Err err ->
             ({model |
               error = {error | chanceError = Just "Chance must be an integer"}}, Cmd.none)
+    ClearErrorMessage ->
+      let
+        error = model.error
+      in
+        ({model | error = {error | errorMsg = Nothing}}, Cmd.none)
 
 urlUpdate : Result String Route -> Model -> (Model, Cmd Msg)
 urlUpdate result model =

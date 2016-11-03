@@ -1,6 +1,7 @@
 module Content exposing (content)
 
 import Models exposing (..)
+import Alert exposing (errorAlert)
 import Grid exposing (gridSvg)
 
 import Html exposing (Html, a, button, div, form, h1, h4, input, label, li, nav, p, span, text, ul)
@@ -42,6 +43,7 @@ content model =
 
     Game gameId ->
       div [class "container"] [
+        errorAlert model.error.errorMsg,
         case model.field of
           Nothing ->
             div [] [text "TODO: No game"]
@@ -84,14 +86,3 @@ customFormInputFeedback error =
     Just errorMsg -> [
       span [class "form-control-feedback"] [text errorMsg]
       ]
-
-errorAlert : Maybe String -> Html Msg
-errorAlert error =
-  case error of
-    Nothing ->
-      div [] []
-    Just errorMsg ->
-      div [classList [("alert", True), ("alert-danger", True)]] [
-        button [type' "button", class "close"] [text "×"],
-        span [] [text errorMsg]
-        ]

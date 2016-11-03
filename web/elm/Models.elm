@@ -10,7 +10,8 @@ type Msg =
   Flag String Int Int | FlagFail (Http.Error Errors) | FlagSucceed (Http.Response Field) |
   Sweep |
   NavigateToIndex | NavigateToGame String |
-  ChangeCustomHeight String | ChangeCustomWidth String | ChangeCustomChance String
+  ChangeCustomHeight String | ChangeCustomWidth String | ChangeCustomChance String |
+  ClearErrorMessage
 
 type alias Errors = {
   height: List String,
