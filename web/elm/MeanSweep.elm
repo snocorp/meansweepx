@@ -12,7 +12,7 @@ import HttpBuilder as Http exposing (jsonReader, send, stringReader, withHeader,
 import Json.Encode as JSE
 import Navigation
 import String
-import Task
+import Task exposing (Task)
 import Time
 
 main : Program Never
@@ -172,15 +172,7 @@ update msg model =
           (model, Cmd.none)
 
     Flag gameId x y ->
-      let
-        newModel =
-          case model.field of
-            Just field ->
-              {model | field = Just {field | activeBlock = Nothing}}
-            Nothing ->
-              model
-      in
-        (newModel, flag gameId x y)
+      handleAction model (flag gameId x y)
 
     FlagSucceed response ->
       let
@@ -189,28 +181,19 @@ update msg model =
         ({model | field = Just updatedField}, Cmd.none)
 
     FlagFail err ->
-      let
-        modelError = model.error
-        message = case err of
-          Http.Timeout ->
-            "It took too long to flag the area. Please try again."
-          Http.NetworkError ->
-            "There was a problem trying to flag the area. Please try again."
-          Http.UnexpectedPayload details ->
-            details
-          Http.BadResponse response ->
-            case response.status of
-              400 ->
-                "There was a problem trying to flag the area."
-              404 ->
-                "The game you tried to flag was not found."
-              _ ->
-                response.statusText
-      in
-        ({model | error = {modelError | errorMsg = Just message}}, Cmd.none)
+      handleActionError model err "sweep"
 
-    Sweep ->
-      (model, Cmd.none)
+    Sweep gameId x y ->
+      handleAction model (sweep gameId x y)
+
+    SweepSucceed response ->
+      let
+        updatedField = response.data
+      in
+        ({model | field = Just updatedField}, Cmd.none)
+
+    SweepFail err ->
+      handleActionError model err "sweep"
 
     NavigateToIndex ->
       ({model | route = Index}, Cmd.none)
@@ -264,6 +247,40 @@ update msg model =
         error = model.error
       in
         ({model | error = {error | errorMsg = Nothing}}, Cmd.none)
+
+handleAction : Model -> Cmd Msg -> (Model, Cmd Msg)
+handleAction model action =
+  let
+    newModel =
+      case model.field of
+        Just field ->
+          {model | field = Just {field | activeBlock = Nothing}}
+        Nothing ->
+          model
+  in
+    (newModel, action)
+
+handleActionError : Model -> Http.Error Errors -> String -> (Model, Cmd Msg)
+handleActionError model err action =
+  let
+    modelError = model.error
+    message = case err of
+      Http.Timeout ->
+        "It took too long to "++action++" the area. Please try again."
+      Http.NetworkError ->
+        "There was a problem trying to "++action++" the area. Please try again."
+      Http.UnexpectedPayload details ->
+        details
+      Http.BadResponse response ->
+        case response.status of
+          400 ->
+            "There was a problem trying to "++action++" the area."
+          404 ->
+            "The game you tried to "++action++" was not found."
+          _ ->
+            response.statusText
+  in
+    ({model | error = {modelError | errorMsg = Just message}}, Cmd.none)
 
 urlUpdate : Result String Route -> Model -> (Model, Cmd Msg)
 urlUpdate result model =
@@ -323,14 +340,20 @@ loadGame gameId =
 
 flag : String -> Int -> Int -> Cmd Msg
 flag gameId x y =
+  Task.perform FlagFail FlagSucceed (blockAction "flag" gameId x y)
+
+sweep : String -> Int -> Int -> Cmd Msg
+sweep gameId x y =
+  Task.perform SweepFail SweepSucceed (blockAction "sweep" gameId x y)
+
+blockAction : String -> String -> Int -> Int -> Task (Http.Error Errors) (Http.Response Field)
+blockAction action gameId x y =
   let
-    url = String.join "/" ["/api/fields/flag", gameId, toString x, toString y]
+    url = String.join "/" ["/api/fields", action, gameId, toString x, toString y]
   in
-    Task.perform FlagFail FlagSucceed (
-      Http.post url
-        |> withTimeout (1 * Time.second)
-        |> send (jsonReader Decoders.fieldDecoder) (jsonReader Decoders.errorsDecoder)
-      )
+    Http.post url
+      |> withTimeout (1 * Time.second)
+      |> send (jsonReader Decoders.fieldDecoder) (jsonReader Decoders.errorsDecoder)
 
 -- SUBSCRIPTIONS
 

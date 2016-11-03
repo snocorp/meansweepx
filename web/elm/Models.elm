@@ -8,7 +8,7 @@ type Msg =
   LoadGame String Bool | LoadGameSucceed (Http.Response Field) | LoadGameFail (Http.Error String) |
   ActivateBlock Int Int |
   Flag String Int Int | FlagFail (Http.Error Errors) | FlagSucceed (Http.Response Field) |
-  Sweep |
+  Sweep String Int Int | SweepFail (Http.Error Errors) | SweepSucceed (Http.Response Field) |
   NavigateToIndex | NavigateToGame String |
   ChangeCustomHeight String | ChangeCustomWidth String | ChangeCustomChance String |
   ClearErrorMessage

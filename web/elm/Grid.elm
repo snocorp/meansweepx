@@ -105,8 +105,8 @@ flagOrClearRect flagged gameId colIndex rowIndex =
         y (toString clearY),
         width (toString blockSize),
         height (toString blockSize),
-        fill "#97de9a"
-        -- TODO sweep onClick
+        fill "#97de9a",
+        onClick (Sweep gameId colIndex rowIndex)
         ] []
       ]
 
