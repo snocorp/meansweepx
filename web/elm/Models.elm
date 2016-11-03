@@ -1,5 +1,6 @@
 module Models exposing (..)
 
+import Array exposing (Array)
 import HttpBuilder as Http
 
 type Msg =
@@ -28,8 +29,8 @@ type alias GridBlock = {
   flagged : Bool,
   swept: Bool
 }
-type alias GridRow = List GridBlock
-type alias Grid = List GridRow
+type alias GridRow = Array GridBlock
+type alias Grid = Array GridRow
 
 type GameResult = Win | Loss | Undecided
 

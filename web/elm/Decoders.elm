@@ -33,7 +33,7 @@ fieldDecoder =
     |> requiredAt ["data", "width"]  JSD.int
     |> requiredAt ["data", "count"]  JSD.int
     |> requiredAt ["data", "result"] resultDecoder
-    |> requiredAt ["data", "grid"]   (JSD.list (JSD.list gridBlockDecoder))
+    |> requiredAt ["data", "grid"]   (JSD.array (JSD.array gridBlockDecoder))
     |> hardcoded Nothing
 
 errorsDecoder : JSD.Decoder Errors

@@ -2,6 +2,7 @@ module Grid exposing (gridSvg)
 
 import Models exposing (..)
 
+import Array exposing (Array)
 import String exposing (join)
 import Svg exposing (Svg, g, circle, rect, line, polygon, svg, text', text)
 import Svg.Attributes exposing (..)
@@ -30,11 +31,15 @@ gridViewBox h w =
 
 gridRows : Field -> List (Svg Msg)
 gridRows field =
-  List.indexedMap (\index row -> g [] (gridRow field row index)) field.grid
+  let
+    gridList = Array.toList field.grid
+  in
+    List.indexedMap (\index row -> g [] (gridRow field row index)) gridList
 
 gridRow : Field -> GridRow -> Int -> List (Svg Msg)
 gridRow field row rowIndex =
   let
+    rowList = Array.toList row
     layer1 =
       List.indexedMap (\index gridBlock ->
         g [] [
@@ -48,25 +53,43 @@ gridRow field row rowIndex =
           else if gridBlock.value == 0 then
             gridText index rowIndex ""
           else
-            gridText index rowIndex (toString gridBlock.value))
+            gridText index rowIndex (toString gridBlock.value)),
+          (gridRectOverlay (gridBlock.flagged || gridBlock.value == -2) index rowIndex)
           ]
-        ) row
+        ) rowList
     layer2 =
       case field.activeBlock of
         Just (x, y) ->
-          [(flagOrClearRect field.id x y)]
+          let
+            maybeGridRow = Array.get y field.grid
+            maybeGridBlock =
+              case maybeGridRow of
+                Just row ->
+                  Array.get x row
+                Nothing ->
+                  Nothing
+            flagged =
+              case maybeGridBlock of
+                Just gridBlock ->
+                  gridBlock.flagged
+                Nothing ->
+                  False
+          in
+            [(flagOrClearRect flagged field.id x y)]
         Nothing ->
           []
   in
     layer1 ++ layer2
 
-flagOrClearRect : String -> Int -> Int -> Svg Msg
-flagOrClearRect gameId colIndex rowIndex =
+flagOrClearRect : Bool -> String -> Int -> Int -> Svg Msg
+flagOrClearRect flagged gameId colIndex rowIndex =
   let
     flagX = (indexToPoints colIndex) - (blockSize // 2)
     flagY = (indexToPoints rowIndex)
     clearX = flagX + blockSize
     clearY = flagY
+    flagColor =
+      if flagged then "#e9ec79" else "#f3aaaa"
   in
     g [] [
       rect [
@@ -74,7 +97,7 @@ flagOrClearRect gameId colIndex rowIndex =
         y (toString flagY),
         width (toString blockSize),
         height (toString blockSize),
-        fill "#f3aaaa",
+        fill flagColor,
         onClick (Flag gameId colIndex rowIndex)
         ] [],
       rect [
@@ -82,8 +105,8 @@ flagOrClearRect gameId colIndex rowIndex =
         y (toString clearY),
         width (toString blockSize),
         height (toString blockSize),
-        fill "#97de9a",
-        onClick (Flag gameId colIndex rowIndex)
+        fill "#97de9a"
+        -- TODO sweep onClick
         ] []
       ]
 
@@ -94,9 +117,25 @@ gridRect colIndex rowIndex =
     y (toString (indexToPoints rowIndex)),
     width (toString blockSize),
     height (toString blockSize),
-    fill "#ccc",
-    onClick (ActivateBlock colIndex rowIndex)
+    fill "#ccc"
     ] []
+
+gridRectOverlay : Bool -> Int -> Int -> Svg Msg
+gridRectOverlay active colIndex rowIndex =
+  let
+    eventHandlers =
+      if active then
+        [onClick (ActivateBlock colIndex rowIndex)]
+      else
+        []
+  in
+    rect ([
+      x (toString (indexToPoints colIndex)),
+      y (toString (indexToPoints rowIndex)),
+      width (toString blockSize),
+      height (toString blockSize),
+      fill "rgba(0,0,0,0)"
+      ] ++ eventHandlers) []
 
 gridText : Int -> Int -> String -> Svg Msg
 gridText colIndex rowIndex value =
@@ -107,8 +146,7 @@ gridText colIndex rowIndex value =
     fontSize "35",
     fill "#777",
     alignmentBaseline "middle",
-    textAnchor "middle",
-    onClick (ActivateBlock colIndex rowIndex)
+    textAnchor "middle"
     ] [text value]
 
 bombIcon : Int -> Int -> Svg Msg
@@ -193,8 +231,7 @@ flagIcon colIndex rowIndex =
             [(centerX - (blockSize * 7 // 32)), (centerY - blockSize // 4)],
             [(centerX - (blockSize * 7 // 32)), (centerY + blockSize // 4)],
             [(centerX + (blockSize * 7 // 32)), centerY]
-          ]),
-        onClick (ActivateBlock colIndex rowIndex)
+          ])
         ] []
       ]
 
