@@ -9,12 +9,9 @@ defmodule Meansweepx.FieldView do
     grid_matrix = Enum.map(1..field.height, fn(y) ->
       Enum.map(1..field.width, fn(x) ->
         v = Map.get(field.grid, "#{x-1},#{y-1}")
-        if v["swept"] do
-          v
-        else
-          # hide the value
-          %{v | "value" => -2}
-        end
+        value = if v["swept"] do v["value"] else -2 end
+
+        %{v: value, f: v["flagged"], s: v["swept"]}
       end)
     end)
     %{
