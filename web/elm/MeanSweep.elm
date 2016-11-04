@@ -167,7 +167,11 @@ update msg model =
     ActivateBlock x y ->
       case model.field of
         Just field ->
-          ({model | field = Just {field | activeBlock = Just (Debug.log "x,y" (x, y))}}, Cmd.none)
+          case field.result of
+            Undecided ->
+              ({model | field = Just {field | activeBlock = Just (Debug.log "x,y" (x, y))}}, Cmd.none)
+            _ ->
+              (model, Cmd.none)
         Nothing ->
           (model, Cmd.none)
 
@@ -254,7 +258,11 @@ handleAction model action =
     newModel =
       case model.field of
         Just field ->
-          {model | field = Just {field | activeBlock = Nothing}}
+          case field.result of
+            Undecided ->
+              {model | field = Just {field | activeBlock = Nothing}}
+            _ ->
+              model
         Nothing ->
           model
   in

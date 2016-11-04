@@ -1,7 +1,7 @@
 module Content exposing (content)
 
 import Models exposing (..)
-import Alert exposing (errorAlert)
+import Alert exposing (..)
 import Grid exposing (gridSvg)
 
 import Html exposing (Html, a, button, div, form, h1, h4, input, label, li, nav, p, span, text, ul)
@@ -42,15 +42,32 @@ content model =
         ]
 
     Game gameId ->
-      div [class "container"] [
-        errorAlert model.error.errorMsg,
-        case model.field of
+      div [class "container"]
+        (case model.field of
           Nothing ->
-            div [] [text "TODO: No game"]
+            [div [] [text "No game"]]
 
           Just field ->
-            Grid.gridSvg field
-        ]
+            let
+              winResult =
+                case field.result of
+                  Win ->
+                    Just "Congratulations! The map is clear."
+                  _ ->
+                    Nothing
+              lossResult =
+                case field.result of
+                  Loss ->
+                    Just "You lose. Better luck next time."
+                  _ ->
+                    Nothing
+            in
+              [
+                errorAlert model.error.errorMsg,
+                dangerAlert lossResult,
+                successAlert winResult,
+                Grid.gridSvg field
+                ])
 
 minefieldCard : Int -> Int -> Int -> Html Msg
 minefieldCard h w c =

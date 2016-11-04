@@ -1,4 +1,4 @@
-module Alert exposing (errorAlert)
+module Alert exposing (errorAlert, dangerAlert, successAlert)
 
 import Models exposing (..)
 
@@ -15,4 +15,22 @@ errorAlert error =
       div [classList [("alert", True), ("alert-danger", True)]] [
         button [type' "button", class "close", onClick ClearErrorMessage] [text "×"],
         span [] [text errorMsg]
+        ]
+
+dangerAlert : Maybe String -> Html Msg
+dangerAlert maybeMsg =
+  alert "danger" maybeMsg
+
+successAlert : Maybe String -> Html Msg
+successAlert maybeMsg =
+  alert "success" maybeMsg
+
+alert : String -> Maybe String -> Html Msg
+alert alertType maybeMsg =
+  case maybeMsg of
+    Nothing ->
+      div [] []
+    Just msg ->
+      div [classList [("alert", True), ("alert-" ++ alertType, True)]] [
+        span [] [text msg]
         ]
