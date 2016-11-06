@@ -2,6 +2,8 @@ module Models exposing (..)
 
 import Array exposing (Array)
 import HttpBuilder as Http
+import Time exposing (Time)
+import Time.DateTime as DateTime exposing (DateTime, DateTimeDelta)
 
 type Msg =
   NewGame GameSpec Bool | NewGameSucceed (Http.Response Field) | NewGameFail (Http.Error Errors) | NewGameCancel |
@@ -11,7 +13,8 @@ type Msg =
   Sweep String Int Int | SweepFail (Http.Error Errors) | SweepSucceed (Http.Response Field) |
   NavigateToIndex | NavigateToGame String |
   ChangeCustomHeight String | ChangeCustomWidth String | ChangeCustomChance String |
-  ClearErrorMessage
+  ClearErrorMessage |
+  Tick Time
 
 type alias Errors = {
   height: List String,
@@ -42,6 +45,7 @@ type alias Field = {
   count : Int,
   result : GameResult,
   grid : Grid,
+  started: DateTime,
   activeBlock : Maybe (Int, Int)
   }
 
@@ -59,5 +63,6 @@ type alias Model = {
   error : Error,
   customGameSpec: GameSpec,
   newGameSpec: Maybe GameSpec,
-  field : Maybe Field
+  field : Maybe Field,
+  timeSinceStarted : DateTimeDelta
 }

@@ -14,6 +14,7 @@ import Navigation
 import String
 import Task exposing (Task)
 import Time
+import Time.DateTime as DateTime exposing (DateTime, DateTimeDelta)
 
 main : Program Never
 main =
@@ -51,12 +52,14 @@ init : Result String Route -> (Model, Cmd Msg)
 init result =
   let
     spec = GameSpec 0 0 0
+    timeSinceStarted = DateTimeDelta 0 0 0 0 0 0 0
     model = Model
       Index
       emptyError
       spec
       Nothing
       Nothing
+      timeSinceStarted
     cmd = case result of
       Ok route ->
         case route of
@@ -81,7 +84,7 @@ update msg model =
           ({model | newGameSpec = Nothing}, newGame gameSpec)
         Just field ->
           -- TODO improve to detect resolved games
-          if confirm then
+          if confirm || field.result /= Undecided then
             ({model | newGameSpec = Nothing}, newGame gameSpec)
           else
             ({model | newGameSpec = Just gameSpec}, Cmd.none)
@@ -246,11 +249,24 @@ update msg model =
           Err err ->
             ({model |
               error = {error | chanceError = Just "Chance must be an integer"}}, Cmd.none)
+
     ClearErrorMessage ->
       let
         error = model.error
       in
         ({model | error = {error | errorMsg = Nothing}}, Cmd.none)
+
+    Tick newTimestamp ->
+      let
+        newDateTime = DateTime.fromTimestamp newTimestamp
+        delta =
+          case model.field of
+            Just field ->
+              DateTime.delta newDateTime field.started
+            Nothing ->
+              DateTimeDelta 0 0 0 0 0 0 0
+      in
+        ({model | timeSinceStarted = delta}, Cmd.none)
 
 handleAction : Model -> Cmd Msg -> (Model, Cmd Msg)
 handleAction model action =
@@ -368,7 +384,7 @@ blockAction action gameId x y =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-  Sub.none
+  Time.every Time.second Tick
 
 
 -- VIEW

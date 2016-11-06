@@ -1,6 +1,8 @@
 defmodule Meansweepx.FieldView do
   use Meansweepx.Web, :view
 
+  require Ecto.DateTime
+
   def render("show.json", %{field: field}) do
     %{data: render_one(field, Meansweepx.FieldView, "field.json")}
   end
@@ -21,7 +23,8 @@ defmodule Meansweepx.FieldView do
       count: field.count,
       active: field.active,
       grid: grid_matrix,
-      result: field.result
+      result: field.result,
+      started: (Ecto.DateTime.to_iso8601 field.inserted_at) <> "Z"
     }
   end
 end
