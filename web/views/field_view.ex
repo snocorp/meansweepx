@@ -16,6 +16,11 @@ defmodule Meansweepx.FieldView do
         %{v: value, f: v["flagged"], s: v["swept"]}
       end)
     end)
+    finished = if field.finished_at == nil do
+      nil
+    else
+      (Ecto.DateTime.to_iso8601 field.finished_at) <> "Z"
+    end
     %{
       id: field.id,
       width: field.width,
@@ -24,7 +29,8 @@ defmodule Meansweepx.FieldView do
       active: field.active,
       grid: grid_matrix,
       result: field.result,
-      started: (Ecto.DateTime.to_iso8601 field.inserted_at) <> "Z"
+      started: (Ecto.DateTime.to_iso8601 field.inserted_at) <> "Z",
+      finished: finished
     }
   end
 end

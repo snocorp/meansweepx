@@ -10,6 +10,7 @@ defmodule Meansweepx.Field do
     field :active, :boolean, default: false
     field :grid, :map
     field :result, :integer, default: 0
+    field :finished_at, Ecto.DateTime
 
     timestamps()
   end
@@ -19,7 +20,7 @@ defmodule Meansweepx.Field do
   """
   def changeset(struct, params \\ %{}) do
     struct
-    |> cast(params, [:width, :height, :count, :active, :grid, :result])
+    |> cast(params, [:width, :height, :count, :active, :grid, :result, :finished_at])
     |> validate_required([:width, :height, :count, :active, :grid])
     |> validate_number(:height, greater_than: 0, less_than_or_equal_to: 100)
     |> validate_number(:width, greater_than: 0, less_than_or_equal_to: 100)

@@ -154,18 +154,23 @@ defmodule Meansweepx.FieldController do
                   }
                 end)
 
-                changes = cond do
-                  grid[key]["value"] == 0 ->
+                changes = if grid[key]["value"] >= 0 do
+                  grid = if grid[key]["value"] == 0 do
                     n = unswept_neighbours(grid, x, y, field.height, field.width)
                     grid = sweep_neighbours(n, grid, field.height, field.width)
-                    result = calculate_result(grid)
-                    %{active: result == 0, result: result, grid: grid}
-                  grid[key]["value"] > 0 ->
-                    result = calculate_result(grid)
-                    %{active: result == 0, result: result, grid: grid}
-                  # bomb
-                  true ->
-                    %{active: false, result: 2, grid: grid}
+                  else
+                    grid
+                  end
+                  result = calculate_result(grid)
+                  finished_at = if result == 0 do
+                    nil
+                  else
+                    Ecto.DateTime.utc
+                  end
+                  %{active: result == 0, result: result, finished_at: finished_at, grid: grid}
+                # bomb
+                else
+                  %{active: false, result: 2, finished_at: Ecto.DateTime.utc, grid: grid}
                 end
 
                 changeset = Field.changeset(field, changes)
