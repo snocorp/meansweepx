@@ -8,7 +8,7 @@ import Time.DateTime as DateTime exposing (DateTime, DateTimeDelta)
 type Msg =
   NewGame GameSpec Bool | NewGameSucceed (Http.Response Field) | NewGameFail (Http.Error Errors) | NewGameCancel |
   LoadGame String Bool | LoadGameSucceed (Http.Response Field) | LoadGameFail (Http.Error String) |
-  ActivateBlock Int Int |
+  ActivateBlock Int Int | DeactivateBlock |
   Flag String Int Int | FlagFail (Http.Error Errors) | FlagSucceed (Http.Response Field) |
   Sweep String Int Int | SweepFail (Http.Error Errors) | SweepSucceed (Http.Response Field) |
   NavigateToIndex | NavigateToGame String |

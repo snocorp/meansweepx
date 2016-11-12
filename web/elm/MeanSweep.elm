@@ -8,6 +8,7 @@ import Modal
 
 import Html exposing (Html, a, button, div, form, h1, h4, input, label, li, nav, p, span, text, ul)
 import Html.Attributes exposing (class, classList, for, href, id, max, min, type', value)
+import Html.Events exposing (onClick)
 import HttpBuilder as Http exposing (jsonReader, send, stringReader, withHeader, withJsonBody, withTimeout)
 import Json.Encode as JSE
 import Navigation
@@ -175,6 +176,16 @@ update msg model =
               ({model | field = Just {field | activeBlock = Just (Debug.log "x,y" (x, y))}}, Cmd.none)
             _ ->
               (model, Cmd.none)
+        Nothing ->
+          (model, Cmd.none)
+
+    DeactivateBlock ->
+      case model.field of
+        Just field ->
+          let
+            x = Debug.log "activeBlock" (toString field.activeBlock)
+          in
+            ({model | field = Just {field | activeBlock = Nothing}}, Cmd.none)
         Nothing ->
           (model, Cmd.none)
 
@@ -394,7 +405,7 @@ view model =
   let
     showModal = model.newGameSpec /= Nothing
   in
-    div [classList [("modal-open", showModal)]] [
+    div [classList [("modal-open", showModal)], onClick DeactivateBlock] [
       Header.header model,
       Content.content model,
       Modal.confirmModal model,

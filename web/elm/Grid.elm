@@ -3,10 +3,21 @@ module Grid exposing (gridSvg)
 import Models exposing (..)
 
 import Array exposing (Array)
+import Json.Decode as JSD
 import String exposing (join)
-import Svg exposing (Svg, g, circle, rect, line, polygon, svg, text', text)
+import Svg exposing (Svg, Attribute, g, circle, rect, line, polygon, svg, text', text)
 import Svg.Attributes exposing (..)
-import Svg.Events exposing (onClick)
+import Html.Events exposing (Options, onWithOptions)
+
+noBubble : Options
+noBubble =
+  { stopPropagation = True
+  , preventDefault = True
+  }
+
+onClick : msg -> Attribute msg
+onClick message =
+  onWithOptions "click" noBubble (JSD.succeed message)
 
 blockSize : Int
 blockSize =
