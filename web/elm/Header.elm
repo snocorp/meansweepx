@@ -20,13 +20,13 @@ returnToGame model =
     Just field ->
       let
         status =
-          case field.result of
+          (case field.result of
             Undecided ->
-              toString model.timeSinceStarted.seconds
+              ""
             Win ->
-              "Win"
+              "Win "
             Loss ->
-              "Loss"
+              "Loss ") ++ toString model.timeSinceStarted.seconds
       in
         [
           ul [class "nav navbar-nav"] [

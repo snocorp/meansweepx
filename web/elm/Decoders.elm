@@ -3,7 +3,7 @@ module Decoders exposing (fieldDecoder, errorsDecoder)
 import Models exposing (..)
 
 import Json.Decode as JSD
-import Json.Decode.Pipeline exposing (decode, required, requiredAt, optional, optionalAt, hardcoded, resolveResult)
+import Json.Decode.Pipeline exposing (decode, hardcoded, nullable, optional, optionalAt, required, requiredAt, resolveResult)
 import Time.DateTime as DateTime exposing (DateTime)
 
 dateTimeDecoder : JSD.Decoder DateTime
@@ -46,6 +46,7 @@ fieldDecoder =
     |> requiredAt ["data", "result"] resultDecoder
     |> requiredAt ["data", "grid"]   (JSD.array (JSD.array gridBlockDecoder))
     |> requiredAt ["data", "started"] dateTimeDecoder
+    |> requiredAt ["data", "finished"] (nullable dateTimeDecoder)
     |> hardcoded Nothing
 
 errorsDecoder : JSD.Decoder Errors

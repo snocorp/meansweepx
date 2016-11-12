@@ -273,7 +273,11 @@ update msg model =
         delta =
           case model.field of
             Just field ->
-              DateTime.delta newDateTime field.started
+              case field.finished of
+                Nothing ->
+                  DateTime.delta newDateTime field.started
+                Just finished ->
+                  DateTime.delta finished field.started
             Nothing ->
               DateTimeDelta 0 0 0 0 0 0 0
       in

@@ -46,6 +46,7 @@ type alias Field = {
   result : GameResult,
   grid : Grid,
   started: DateTime,
+  finished: Maybe DateTime,
   activeBlock : Maybe (Int, Int)
   }
 
