@@ -37,23 +37,17 @@ defmodule Meansweepx.FieldController do
             |> put_resp_header("location", field_path(conn, :show, field))
             |> render("show.json", field: field)
           {:error, changeset} ->
-            conn
-            |> put_status(:unprocessable_entity)
-            |> render(Meansweepx.ChangesetView, "error.json", changeset: changeset)
+            render_changeset_error(conn, :unprocessable_entity, changeset)
         end
       _ ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> render(Meansweepx.ChangesetView, "error.json", changeset: cs)
+        render_changeset_error(conn, :unprocessable_entity, cs)
     end
   end
 
   def show(conn, %{"id" => id}) do
     case field = Repo.get(Field, id) do
       nil ->
-        conn
-        |> put_status(:not_found)
-        |> render(Meansweepx.ErrorView, "404.json", errors: %{field: ["not found"]})
+        render_error(conn, :not_found, "404", %{field: ["not found"]})
       _ ->
         render(conn, "show.json", field: field)
     end
@@ -65,9 +59,7 @@ defmodule Meansweepx.FieldController do
       %{:params => %{"field_id" => field_id, "x" => x, "y" => y}, :valid? => true} ->
         case field = Repo.get(Field, field_id) do
           nil ->
-            conn
-            |> put_status(:not_found)
-            |> render(Meansweepx.ErrorView, "404.json", errors: %{field: ["not found"]})
+            render_error(conn, :not_found, "404", %{field: ["not found"]})
           _ ->
             {x, _} = Integer.parse(x)
             {y, _} = Integer.parse(y)
@@ -77,13 +69,9 @@ defmodule Meansweepx.FieldController do
 
             cond do
               map_size(errors) > 0 ->
-                conn
-                |> put_status(:bad_request)
-                |> render(Meansweepx.ErrorView, "400.json", errors: errors)
+                render_error(conn, :bad_request, "400", errors)
               !field.active ->
-                conn
-                |> put_status(:bad_request)
-                |> render(Meansweepx.ErrorView, "400.json", errors: %{field: ["is inactive"]})
+                render_error(conn, :bad_request, "400", %{field: ["is inactive"]})
               true ->
                 {_, grid} = Map.get_and_update(field.grid, "#{x},#{y}", fn(current_value) ->
                   {
@@ -101,16 +89,12 @@ defmodule Meansweepx.FieldController do
                     conn
                     |> render("show.json", field: field)
                   {:error, changeset} ->
-                    conn
-                    |> put_status(:bad_request)
-                    |> render(Meansweepx.ChangesetView, "error.json", changeset: changeset)
+                    render_changeset_error(conn, :bad_request, changeset)
                 end
             end
         end
       _ ->
-        conn
-        |> put_status(:bad_request)
-        |> render(Meansweepx.ChangesetView, "error.json", changeset: cs)
+        render_changeset_error(conn, :bad_request, cs)
     end
   end
 
@@ -120,9 +104,7 @@ defmodule Meansweepx.FieldController do
       %{:params => %{"field_id" => field_id, "x" => x, "y" => y}, :valid? => true} ->
         case field = Repo.get(Field, field_id) do
           nil ->
-            conn
-            |> put_status(:not_found)
-            |> render(Meansweepx.ErrorView, "404.json", errors: %{field: ["not found"]})
+            render_error(conn, :not_found, "404", %{field: ["not found"]})
           _ ->
             {x, _} = Integer.parse(x)
             {y, _} = Integer.parse(y)
@@ -132,13 +114,9 @@ defmodule Meansweepx.FieldController do
 
             cond do
               map_size(errors) > 0 ->
-                conn
-                |> put_status(:bad_request)
-                |> render(Meansweepx.ErrorView, "400.json", errors: errors)
+                render_error(conn, :bad_request, "400", errors)
               !field.active ->
-                conn
-                |> put_status(:bad_request)
-                |> render(Meansweepx.ErrorView, "400.json", errors: %{field: ["is inactive"]})
+                render_error(conn, :bad_request, "400", %{field: ["is inactive"]})
               true ->
                 key = "#{x},#{y}"
 
@@ -179,16 +157,12 @@ defmodule Meansweepx.FieldController do
                     conn
                     |> render("show.json", field: field)
                   {:error, changeset} ->
-                    conn
-                    |> put_status(:bad_request)
-                    |> render(Meansweepx.ChangesetView, "error.json", changeset: changeset)
+                    render_changeset_error(conn, :bad_request, changeset)
                 end
             end
         end
       _ ->
-        conn
-        |> put_status(:bad_request)
-        |> render(Meansweepx.ChangesetView, "error.json", changeset: cs)
+        render_changeset_error(conn, :bad_request, cs)
     end
   end
 
@@ -325,5 +299,17 @@ defmodule Meansweepx.FieldController do
     else
       0 # no result
     end
+  end
+
+  defp render_error(conn, status, view, errors) do
+    conn
+    |> put_status(status)
+    |> render(Meansweepx.ErrorView, view <> ".json", errors: errors)
+  end
+
+  defp render_changeset_error(conn, status, changeset) do
+    conn
+    |> put_status(status)
+    |> render(Meansweepx.ChangesetView, "error.json", changeset: changeset)
   end
 end

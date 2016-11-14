@@ -19,13 +19,17 @@ defmodule Meansweepx.FieldControllerTest do
       grid: %{"0,0" => %{"value" => 0, "flagged" => false, "swept" => false}}
     }
     conn = get conn, field_path(conn, :show, field)
-    assert json_response(conn, 200)["data"] == %{"id" => field.id,
-      "width" => field.width,
-      "height" => field.height,
-      "count" => field.count,
-      "active" => field.active,
-      "grid" => [Enum.map(Map.values(field.grid), fn(v) -> Map.put(v, "value", -2) end)],
-      "result" => 0}
+    data = json_response(conn, 200)["data"]
+    assert data["id"] == field.id
+    assert data["width"] == field.width
+    assert data["height"] == field.height
+    assert data["count"] == field.count
+    assert data["active"] == field.active
+    assert data["grid"] == [Enum.map(Map.values(field.grid), fn(v) ->
+      %{"v" => -2, "f" => v["flagged"], "s" => v["swept"]}
+    end)]
+    assert data["result"] == 0
+    assert data["finish"] == nil
   end
 
   test "renders page not found when id is nonexistent", %{conn: conn} do
@@ -89,9 +93,9 @@ defmodule Meansweepx.FieldControllerTest do
     assert field_response != %{}
     gridRow0 = Enum.at(field_response["grid"], 0)
     grid10 = Enum.at(gridRow0, 1)
-    assert grid10["value"] == -2  # unknown
-    assert grid10["flagged"] == true
-    assert grid10["swept"] == false
+    assert grid10["v"] == -2  # unknown
+    assert grid10["f"] == true
+    assert grid10["s"] == false
   end
 
   test "does not sweep chosen grid and renders errors when data is invalid", %{conn: conn} do
@@ -135,9 +139,9 @@ defmodule Meansweepx.FieldControllerTest do
 
     # all grids should be swept since there are no bombs
     Enum.each(List.flatten(field_response["grid"]), fn(v) ->
-      assert is_number(v["value"])
-      assert v["flagged"] == false
-      assert v["swept"] == true
+      assert is_number(v["v"])
+      assert v["f"] == false
+      assert v["s"] == true
     end)
   end
 
@@ -162,9 +166,9 @@ defmodule Meansweepx.FieldControllerTest do
       row = Enum.at(field_response["grid"], y)
       Enum.each([0,1], fn(x) ->
         v = Enum.at(row, x)
-        assert is_number(v["value"])
-        assert v["flagged"] == false
-        assert v["swept"] == (x == 1 && y == 0)
+        assert is_number(v["v"])
+        assert v["f"] == false
+        assert v["s"] == (x == 1 && y == 0)
       end)
     end)
   end
@@ -195,23 +199,10 @@ defmodule Meansweepx.FieldControllerTest do
       row = Enum.at(field_response["grid"], y)
       Enum.each([0,1], fn(x) ->
         v = Enum.at(row, x)
-        assert is_number(v["value"])
-        assert v["flagged"] == false
-        assert v["swept"] == (x != 0 || y != 0)
+        assert is_number(v["v"])
+        assert v["f"] == false
+        assert v["s"] == (x != 0 || y != 0)
       end)
     end)
   end
-
-  # test "updates and renders chosen resource when data is valid", %{conn: conn} do
-  #   field = Repo.insert! %Field{}
-  #   conn = put conn, field_path(conn, :update, field), field: @valid_attrs
-  #   assert json_response(conn, 200)["data"]["id"]
-  #   assert Repo.get_by(Field, @valid_attrs)
-  # end
-  #
-  # test "does not update chosen resource and renders errors when data is invalid", %{conn: conn} do
-  #   field = Repo.insert! %Field{}
-  #   conn = put conn, field_path(conn, :update, field), field: @invalid_attrs
-  #   assert json_response(conn, 422)["errors"] != %{}
-  # end
 end
