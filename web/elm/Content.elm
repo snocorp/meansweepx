@@ -5,7 +5,7 @@ import Alert exposing (..)
 import Grid exposing (gridSvg)
 
 import Html exposing (Html, a, button, div, form, h1, h4, input, label, li, nav, p, span, text, ul)
-import Html.Attributes exposing (class, classList, for, href, id, max, min, type', value)
+import Html.Attributes exposing (class, classList, for, href, id, max, min, type_, value)
 import Html.Events exposing (onClick, onInput)
 
 content : Model -> Html Msg
@@ -34,7 +34,7 @@ content model =
                 customFormInput model.customGameSpec.width "Field width" "width" model.error.widthError ChangeCustomWidth,
                 customFormInput model.customGameSpec.height "Field height" "height" model.error.heightError ChangeCustomHeight,
                 customFormInput model.customGameSpec.chance "Percent bomb coverage" "chance" model.error.chanceError ChangeCustomChance,
-                button [type' "button", class "btn btn-secondary", onClick (NewGame model.customGameSpec False)] [text "Play"]
+                button [type_ "button", class "btn btn-secondary", onClick (NewGame model.customGameSpec False)] [text "Play"]
                 ]
               ]
             ]
@@ -86,7 +86,7 @@ customFormInput fieldValue fieldLabel fieldId error changeHandler =
     div [classList [("form-group", True), ("has-danger", hasError)]] ([
       label [for fieldId, class "control-label"] [text fieldLabel],
       input [
-        type' "number",
+        type_ "number",
         Html.Attributes.max "100",
         Html.Attributes.min "1",
         classList [("form-control", True), ("form-control-danger", hasError)],

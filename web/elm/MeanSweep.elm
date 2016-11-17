@@ -7,9 +7,10 @@ import Content
 import Modal
 
 import Html exposing (Html, a, button, div, form, h1, h4, input, label, li, nav, p, span, text, ul)
-import Html.Attributes exposing (class, classList, for, href, id, max, min, type', value)
+import Html.Attributes exposing (class, classList, for, href, id, max, min, type_, value)
 import Html.Events exposing (onClick)
-import HttpBuilder as Http exposing (jsonReader, send, stringReader, withHeader, withJsonBody, withTimeout)
+import Http
+import Json.Decode as JSD
 import Json.Encode as JSE
 import Navigation
 import String
@@ -17,27 +18,34 @@ import Task exposing (Task)
 import Time
 import Time.DateTime as DateTime exposing (DateTime, DateTimeDelta)
 
-main : Program Never
+main : Program Never Model Msg
 main =
   Navigation.program
-    (Navigation.makeParser hashParser)
+    locationParser
     {
       init = init,
       update = update,
-      urlUpdate = urlUpdate,
       subscriptions = subscriptions,
       view = view
       }
 
-hashParser : Navigation.Location -> Result String Route
+locationParser : Navigation.Location -> Msg
+locationParser location =
+  case hashParser location of
+    Game gameId ->
+      NavigateToGame gameId
+    Index ->
+      NavigateToIndex
+
+hashParser : Navigation.Location -> Route
 hashParser location =
   let
     path = (Debug.log "location.hash" (String.dropLeft 2 location.hash))
   in
     if (String.startsWith "/game/" path) && (String.length path) == 42 then
-      Ok (Game (String.right 36 path))
+      Game (String.right 36 path)
     else
-      Ok Index
+      Index
 
 emptyError : Error
 emptyError =
@@ -49,8 +57,9 @@ emptyError =
 
 -- INIT
 
-init : Result String Route -> (Model, Cmd Msg)
-init result =
+-- init : Result String Route -> (Model, Cmd Msg)
+init : Navigation.Location -> (Model, Cmd Msg)
+init location =
   let
     spec = GameSpec 0 0 0
     timeSinceStarted = DateTimeDelta 0 0 0 0 0 0 0
@@ -61,15 +70,11 @@ init result =
       Nothing
       Nothing
       timeSinceStarted
-    cmd = case result of
-      Ok route ->
-        case route of
-          Index ->
-            Debug.log "ok->Index" Cmd.none
-          Game gameId ->
-            Debug.log ("ok->Game "++gameId) (loadGame gameId)
-      Err error ->
-        Debug.log "err" Cmd.none
+    cmd = case hashParser location of
+      Index ->
+        Debug.log "Index" Cmd.none
+      Game gameId ->
+        Debug.log ("Game "++gameId) (loadGame gameId)
   in
     (model, cmd)
 
@@ -92,37 +97,43 @@ update msg model =
 
     NewGameCancel ->
       ({model | newGameSpec = Nothing}, Cmd.none)
-    NewGameSucceed response ->
-      let
-        newField = response.data
-        fieldId = Debug.log "fieldId" newField.id
-      in
-        ({model | field = Just newField}, Navigation.newUrl ("#!/game/" ++ fieldId))
 
-    NewGameFail err ->
+    NewGameResult (Ok newField) ->
+      ({model | field = Just newField}, Navigation.newUrl ("#!/game/" ++ newField.id))
+
+    NewGameResult (Err err) ->
       let
         modelError = model.error
         message = case err of
+          Http.BadUrl details ->
+            details
           Http.Timeout ->
             "It took too long to create a new game. Please try again."
           Http.NetworkError ->
             "There was a problem trying to create a new game. Please try again."
-          Http.UnexpectedPayload details ->
+          Http.BadPayload details _ ->
             details
-          Http.BadResponse response ->
-            case response.status of
+          Http.BadStatus response ->
+            case response.status.code of
               422 ->
                 "There was a problem trying to create a new game. Check the chosen values."
               _ ->
-                response.statusText
+                response.status.message
         error = case err of
-          Http.BadResponse response ->
-            {modelError |
-              errorMsg = Just message,
-              heightError = List.head response.data.height,
-              widthError = List.head response.data.width,
-              chanceError = List.head response.data.chance
-              }
+          Http.BadStatus response ->
+            let
+              responseErrors = case JSD.decodeString Decoders.errorsDecoder response.body of
+                Ok errors ->
+                  errors
+                Err _ ->
+                  Errors [] [] []
+            in
+              {modelError |
+                errorMsg = Just message,
+                heightError = List.head responseErrors.height,
+                widthError = List.head responseErrors.width,
+                chanceError = List.head responseErrors.chance
+                }
           _ ->
             {modelError |
               errorMsg = Just message,
@@ -143,28 +154,27 @@ update msg model =
           else
             (model, Cmd.none)
 
-    LoadGameSucceed response ->
-      let
-        newField = response.data
-      in
-        update (NavigateToGame newField.id) {model | field = Just newField}
+    LoadGameResult (Ok newField) ->
+      update (NavigateToGame newField.id) {model | field = Just newField}
 
-    LoadGameFail err ->
+    LoadGameResult (Err err) ->
       let
         error = model.error
         message = case err of
+          Http.BadUrl details ->
+            details
           Http.Timeout ->
             "It took too long to load the game. Please try again."
           Http.NetworkError ->
             "There was a problem trying to load the game. Please try again."
-          Http.UnexpectedPayload details ->
+          Http.BadPayload details _ ->
             details
-          Http.BadResponse response ->
-            case response.status of
+          Http.BadStatus response ->
+            case response.status.code of
               404 ->
                 "Game not found. Check the URL."
               _ ->
-                response.data
+                response.body
       in
         ({model | error = {error | errorMsg = Just message}}, Cmd.none)
 
@@ -192,32 +202,33 @@ update msg model =
     Flag gameId x y ->
       handleAction model (flag gameId x y)
 
-    FlagSucceed response ->
-      let
-        updatedField = response.data
-      in
-        ({model | field = Just updatedField}, Cmd.none)
+    FlagResult (Ok updatedField) ->
+      ({model | field = Just updatedField}, Cmd.none)
 
-    FlagFail err ->
-      handleActionError model err "sweep"
+    FlagResult (Err err) ->
+      handleActionError model err "flag"
 
     Sweep gameId x y ->
       handleAction model (sweep gameId x y)
 
-    SweepSucceed response ->
-      let
-        updatedField = response.data
-      in
-        ({model | field = Just updatedField}, Cmd.none)
+    SweepResult (Ok updatedField) ->
+      ({model | field = Just updatedField}, Cmd.none)
 
-    SweepFail err ->
+    SweepResult (Err err) ->
       handleActionError model err "sweep"
 
     NavigateToIndex ->
       ({model | route = Index}, Cmd.none)
 
     NavigateToGame gameId ->
-      ({model | route = Game gameId}, Cmd.none)
+      case model.field of
+        Just field ->
+          if field.id == gameId then
+            ({model | route = Game gameId}, Cmd.none)
+          else
+            ({model | field = Nothing}, (loadGame gameId))
+        Nothing ->
+          (model, (loadGame gameId))
 
     ChangeCustomHeight heightStr ->
       let
@@ -299,56 +310,29 @@ handleAction model action =
   in
     (newModel, action)
 
-handleActionError : Model -> Http.Error Errors -> String -> (Model, Cmd Msg)
+handleActionError : Model -> Http.Error -> String -> (Model, Cmd Msg)
 handleActionError model err action =
   let
     modelError = model.error
     message = case err of
+      Http.BadUrl details ->
+        details
       Http.Timeout ->
         "It took too long to "++action++" the area. Please try again."
       Http.NetworkError ->
         "There was a problem trying to "++action++" the area. Please try again."
-      Http.UnexpectedPayload details ->
+      Http.BadPayload details _ ->
         details
-      Http.BadResponse response ->
-        case response.status of
+      Http.BadStatus response ->
+        case response.status.code of
           400 ->
             "There was a problem trying to "++action++" the area."
           404 ->
             "The game you tried to "++action++" was not found."
           _ ->
-            response.statusText
+            response.status.message
   in
     ({model | error = {modelError | errorMsg = Just message}}, Cmd.none)
-
-urlUpdate : Result String Route -> Model -> (Model, Cmd Msg)
-urlUpdate result model =
-  let
-    route = case result of
-      Ok route ->
-        (Debug.log "route" (toString route))
-      Err error ->
-        (Debug.log "error" error)
-    modelError = model.error
-  in
-    case result of
-      Ok route ->
-        case route of
-          Index ->
-            ({model |
-              error = {modelError | errorMsg = Nothing},
-              route = route}, Cmd.none)
-          Game gameId ->
-            case model.field of
-              Just field ->
-                if field.id == gameId then
-                  ({model | route = route}, Cmd.none)
-                else
-                  ({model | field = Nothing}, (loadGame gameId))
-              Nothing ->
-                (model, (loadGame gameId))
-      Err err ->
-        ({model | error = {modelError | errorMsg = Just err}}, Cmd.none)
 
 
 newGame : GameSpec -> Cmd Msg
@@ -359,40 +343,36 @@ newGame gameSpec =
       ("width", JSE.int gameSpec.width),
       ("chance", JSE.int gameSpec.chance)
       ]
+    request = Http.post "/api/fields/" (Http.jsonBody params) Decoders.fieldDecoder
   in
-    Task.perform NewGameFail NewGameSucceed (
-      Http.post "/api/fields/"
-        |> withJsonBody params
-        |> withHeader "Content-Type" "application/json"
-        |> withTimeout (1 * Time.second)
-        |> send (jsonReader Decoders.fieldDecoder) (jsonReader Decoders.errorsDecoder)
-      )
+    Http.send NewGameResult request
 
 loadGame : String -> Cmd Msg
 loadGame gameId =
-  Task.perform LoadGameFail LoadGameSucceed (
-    Http.get ("/api/fields/" ++ gameId)
-      |> withHeader "Content-Type" "application/json"
-      |> withTimeout (1 * Time.second)
-      |> send (jsonReader Decoders.fieldDecoder) stringReader
-    )
+  let
+    request = Http.get ("/api/fields/" ++ gameId) Decoders.fieldDecoder
+  in
+    Http.send LoadGameResult request
 
 flag : String -> Int -> Int -> Cmd Msg
 flag gameId x y =
-  Task.perform FlagFail FlagSucceed (blockAction "flag" gameId x y)
+  blockAction "flag" gameId x y
 
 sweep : String -> Int -> Int -> Cmd Msg
 sweep gameId x y =
-  Task.perform SweepFail SweepSucceed (blockAction "sweep" gameId x y)
+  blockAction "sweep" gameId x y
 
-blockAction : String -> String -> Int -> Int -> Task (Http.Error Errors) (Http.Response Field)
+handleBlockActionResponse : Result Http.Error Field -> Msg
+handleBlockActionResponse result =
+  FlagResult result
+
+blockAction : String -> String -> Int -> Int -> Cmd Msg
 blockAction action gameId x y =
   let
     url = String.join "/" ["/api/fields", action, gameId, toString x, toString y]
+    request = Http.post url Http.emptyBody Decoders.fieldDecoder
   in
-    Http.post url
-      |> withTimeout (1 * Time.second)
-      |> send (jsonReader Decoders.fieldDecoder) (jsonReader Decoders.errorsDecoder)
+    Http.send FlagResult request
 
 -- SUBSCRIPTIONS
 

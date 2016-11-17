@@ -5,7 +5,7 @@ import Models exposing (..)
 import Array exposing (Array)
 import Json.Decode as JSD
 import String exposing (join)
-import Svg exposing (Svg, Attribute, g, circle, rect, line, polygon, svg, text', text)
+import Svg exposing (Svg, Attribute, g, circle, rect, line, polygon, svg, text_, text)
 import Svg.Attributes exposing (..)
 import Html.Events exposing (Options, onWithOptions)
 
@@ -150,7 +150,7 @@ gridRectOverlay active colIndex rowIndex =
 
 gridText : Int -> Int -> String -> Svg Msg
 gridText colIndex rowIndex value =
-  text' [
+  text_ [
     x (toString ((indexToPoints colIndex) + (blockSize // 2))),
     y (toString ((indexToPoints rowIndex) + (blockSize // 2))),
     fontFamily "Arial",

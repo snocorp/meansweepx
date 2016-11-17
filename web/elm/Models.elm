@@ -1,16 +1,16 @@
 module Models exposing (..)
 
 import Array exposing (Array)
-import HttpBuilder as Http
+import Http
 import Time exposing (Time)
 import Time.DateTime as DateTime exposing (DateTime, DateTimeDelta)
 
 type Msg =
-  NewGame GameSpec Bool | NewGameSucceed (Http.Response Field) | NewGameFail (Http.Error Errors) | NewGameCancel |
-  LoadGame String Bool | LoadGameSucceed (Http.Response Field) | LoadGameFail (Http.Error String) |
+  NewGame GameSpec Bool | NewGameCancel | NewGameResult (Result Http.Error Field) |
+  LoadGame String Bool | LoadGameResult (Result Http.Error Field) |
   ActivateBlock Int Int | DeactivateBlock |
-  Flag String Int Int | FlagFail (Http.Error Errors) | FlagSucceed (Http.Response Field) |
-  Sweep String Int Int | SweepFail (Http.Error Errors) | SweepSucceed (Http.Response Field) |
+  Flag String Int Int | FlagResult (Result Http.Error Field) |
+  Sweep String Int Int | SweepResult (Result Http.Error Field) |
   NavigateToIndex | NavigateToGame String |
   ChangeCustomHeight String | ChangeCustomWidth String | ChangeCustomChance String |
   ClearErrorMessage |

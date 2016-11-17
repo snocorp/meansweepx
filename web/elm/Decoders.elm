@@ -2,13 +2,23 @@ module Decoders exposing (fieldDecoder, errorsDecoder)
 
 import Models exposing (..)
 
-import Json.Decode as JSD
-import Json.Decode.Pipeline exposing (decode, hardcoded, nullable, optional, optionalAt, required, requiredAt, resolveResult)
+import Json.Decode as JSD exposing (nullable)
+import Json.Decode.Pipeline exposing (decode, hardcoded, optional, optionalAt, required, requiredAt, resolve)
 import Time.DateTime as DateTime exposing (DateTime)
+
+customDecoder : JSD.Decoder a -> (a -> Result String b) -> JSD.Decoder b
+customDecoder decoder toResult =
+  JSD.map toResult decoder
+    |> JSD.andThen
+      (\result ->
+        case result of
+          Ok b -> JSD.succeed b
+          Err err -> JSD.fail err
+      )
 
 dateTimeDecoder : JSD.Decoder DateTime
 dateTimeDecoder =
-  JSD.customDecoder JSD.string DateTime.fromISO8601
+  customDecoder JSD.string DateTime.fromISO8601
 
 resultDecoder : JSD.Decoder GameResult
 resultDecoder =
@@ -20,20 +30,20 @@ resultDecoder =
         2 -> Result.Ok Loss
         _ -> Result.Err ("Not a valid pattern for decoder to GameResult. Pattern: " ++ (toString int))
   in
-    JSD.customDecoder JSD.int decodeToType
+    customDecoder JSD.int decodeToType
 
 gridBlockDecoder : JSD.Decoder GridBlock
 gridBlockDecoder =
   let
-    asResult : Int -> Bool -> Bool -> Result String GridBlock
+    asResult : Int -> Bool -> Bool -> JSD.Decoder GridBlock
     asResult value flagged swept =
-      Ok (GridBlock value flagged swept)
+      JSD.succeed (GridBlock value flagged swept)
   in
     decode asResult
       |> required "v" JSD.int
       |> required "f" JSD.bool
       |> required "s" JSD.bool
-      |> resolveResult
+      |> resolve
 
 
 fieldDecoder : JSD.Decoder Field

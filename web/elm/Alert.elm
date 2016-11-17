@@ -3,7 +3,7 @@ module Alert exposing (errorAlert, dangerAlert, successAlert)
 import Models exposing (..)
 
 import Html exposing (Html, button, div, span, text)
-import Html.Attributes exposing (class, classList, type')
+import Html.Attributes exposing (class, classList, type_)
 import Html.Events exposing (onClick)
 
 errorAlert : Maybe String -> Html Msg
@@ -13,7 +13,7 @@ errorAlert error =
       div [] []
     Just errorMsg ->
       div [classList [("alert", True), ("alert-danger", True)]] [
-        button [type' "button", class "close", onClick ClearErrorMessage] [text "×"],
+        button [type_ "button", class "close", onClick ClearErrorMessage] [text "×"],
         span [] [text errorMsg]
         ]
 

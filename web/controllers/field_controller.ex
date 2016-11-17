@@ -135,7 +135,7 @@ defmodule Meansweepx.FieldController do
                 changes = if grid[key]["value"] >= 0 do
                   grid = if grid[key]["value"] == 0 do
                     n = unswept_neighbours(grid, x, y, field.height, field.width)
-                    grid = sweep_neighbours(n, grid, field.height, field.width)
+                    sweep_neighbours(n, grid, field.height, field.width)
                   else
                     grid
                   end
