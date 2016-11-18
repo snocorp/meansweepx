@@ -14,7 +14,6 @@ import Json.Decode as JSD
 import Json.Encode as JSE
 import Navigation
 import String
-import Task exposing (Task)
 import Time
 import Time.DateTime as DateTime exposing (DateTime, DateTimeDelta)
 
@@ -356,23 +355,19 @@ loadGame gameId =
 
 flag : String -> Int -> Int -> Cmd Msg
 flag gameId x y =
-  blockAction "flag" gameId x y
+  blockAction FlagResult "flag" gameId x y
 
 sweep : String -> Int -> Int -> Cmd Msg
 sweep gameId x y =
-  blockAction "sweep" gameId x y
+  blockAction SweepResult "sweep" gameId x y
 
-handleBlockActionResponse : Result Http.Error Field -> Msg
-handleBlockActionResponse result =
-  FlagResult result
-
-blockAction : String -> String -> Int -> Int -> Cmd Msg
-blockAction action gameId x y =
+blockAction : (Result Http.Error Field -> Msg) -> String -> String -> Int -> Int -> Cmd Msg
+blockAction msg action gameId x y =
   let
     url = String.join "/" ["/api/fields", action, gameId, toString x, toString y]
     request = Http.post url Http.emptyBody Decoders.fieldDecoder
   in
-    Http.send FlagResult request
+    Http.send msg request
 
 -- SUBSCRIPTIONS
 
